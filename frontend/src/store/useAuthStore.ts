@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import type { User } from '../types'
 
 interface AuthStore {
@@ -19,6 +19,7 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: 'onecard-auth',
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (s) => ({ token: s.token, currentUser: s.currentUser }),
     }
   )

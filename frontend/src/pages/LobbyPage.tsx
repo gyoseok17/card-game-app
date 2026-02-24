@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { getRooms, createRoom, joinRoom } from '../api/room'
 import { useAuthStore } from '../store/useAuthStore'
 import { useLobbyStore } from '../store/useLobbyStore'
+import { useGameStore } from '../store/useGameStore'
 import type { GameRoomSummary } from '../types'
 
 export default function LobbyPage() {
   const currentUser = useAuthStore((s) => s.currentUser)
   const logout = useAuthStore((s) => s.logout)
+  const clearGame = useGameStore((s) => s.clearGame)
   const { rooms, setRooms } = useLobbyStore()
   const navigate = useNavigate()
 
@@ -41,6 +43,7 @@ export default function LobbyPage() {
   }
 
   const handleLogout = () => {
+    clearGame()
     logout()
     navigate('/login')
   }
