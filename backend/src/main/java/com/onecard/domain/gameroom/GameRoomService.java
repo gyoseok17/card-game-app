@@ -76,6 +76,19 @@ public class GameRoomService {
     }
 
     @Transactional
+    public GameRoomResponse kickPlayer(Long roomId, Long requesterId, Long targetId) {
+        GameRoom room = findById(roomId);
+        if (!room.getCreatedBy().getId().equals(requesterId)) {
+            throw new IllegalArgumentException("방장만 강퇴할 수 있습니다.");
+        }
+        if (requesterId.equals(targetId)) {
+            throw new IllegalArgumentException("자신을 강퇴할 수 없습니다.");
+        }
+        memberRepository.deleteByRoomIdAndUserId(roomId, targetId);
+        return getRoom(roomId);
+    }
+
+    @Transactional
     public void leaveRoom(Long roomId, Long userId) {
         GameRoom room = findById(roomId);
 
@@ -122,6 +135,13 @@ public class GameRoomService {
 
         room.start();
         return room;
+    }
+
+    @Transactional
+    public void resetRoom(Long roomId) {
+        GameRoom room = findById(roomId);
+        room.reset();
+        memberRepository.findByRoomIdWithUser(roomId).forEach(GameRoomMember::resetReady);
     }
 
     public GameRoom findById(Long roomId) {

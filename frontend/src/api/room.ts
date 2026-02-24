@@ -24,3 +24,6 @@ export const startGame = (roomId: number) =>
 
 export const inviteUser = (roomId: number, userId: number) =>
   api.post(`/rooms/${roomId}/invite`, { userId })
+
+export const kickPlayer = (roomId: number, targetUserId: number) =>
+  api.post<import('../types').GameRoomDetail>(`/rooms/${roomId}/kick/${targetUserId}`).then((r) => r.data)

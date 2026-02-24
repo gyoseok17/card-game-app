@@ -9,6 +9,7 @@ import com.onecard.dto.response.GameRoomSummaryResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ public class GameRoomController {
     private final GameRoomService gameRoomService;
     private final GameService gameService;
     private final UserService userService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @GetMapping
     public ResponseEntity<List<GameRoomSummaryResponse>> getRooms() {
@@ -64,5 +66,19 @@ public class GameRoomController {
     public ResponseEntity<Void> startGame(@PathVariable Long roomId, Authentication auth) {
         gameService.startGame(roomId, auth.getName());
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{roomId}/kick/{targetUserId}")
+    public ResponseEntity<GameRoomResponse> kickPlayer(@PathVariable Long roomId,
+                                                       @PathVariable Long targetUserId,
+                                                       Authentication auth) {
+        User requester = userService.findByUsername(auth.getName());
+        User target = userService.findById(targetUserId);
+        GameRoomResponse updatedRoom = gameRoomService.kickPlayer(roomId, requester.getId(), targetUserId);
+        messagingTemplate.convertAndSendToUser(
+                target.getUsername(), "/queue/notification",
+                java.util.Map.of("message", "KICKED")
+        );
+        return ResponseEntity.ok(updatedRoom);
     }
 }

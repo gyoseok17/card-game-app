@@ -1,5 +1,6 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { leaveRoom, toggleReady, startGame } from '../../api/room'
+import { leaveRoom, toggleReady, startGame, kickPlayer } from '../../api/room'
 import { useGameStore } from '../../store/useGameStore'
 import { useAuthStore } from '../../store/useAuthStore'
 import GameChat from './GameChat'
@@ -11,8 +12,16 @@ interface Props {
 export default function WaitingRoom({ sendChat }: Props) {
   const currentRoom = useGameStore((s) => s.currentRoom)
   const setCurrentRoom = useGameStore((s) => s.setCurrentRoom)
+  const notification = useGameStore((s) => s.notification)
   const currentUser = useAuthStore((s) => s.currentUser)
   const navigate = useNavigate()
+
+  // 강퇴당했을 때 로비로 이동
+  useEffect(() => {
+    if (notification === 'KICKED') {
+      navigate('/lobby')
+    }
+  }, [notification, navigate])
 
   if (!currentRoom) return null
 
@@ -35,6 +44,11 @@ export default function WaitingRoom({ sendChat }: Props) {
     navigate('/lobby')
   }
 
+  const handleKick = async (targetUserId: number) => {
+    const updated = await kickPlayer(currentRoom.id, targetUserId)
+    setCurrentRoom(updated)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-950 flex items-center justify-center p-4">
       <div className="flex gap-4 w-full max-w-3xl items-start">
@@ -52,7 +66,7 @@ export default function WaitingRoom({ sendChat }: Props) {
               return (
                 <div
                   key={i}
-                  className={`rounded-xl p-4 text-center border ${
+                  className={`rounded-xl p-4 text-center border relative ${
                     member
                       ? 'bg-white/10 border-green-400/30'
                       : 'bg-white/5 border-white/10 border-dashed'
@@ -60,6 +74,15 @@ export default function WaitingRoom({ sendChat }: Props) {
                 >
                   {member ? (
                     <>
+                      {/* 방장이고 자신이 아닌 멤버일 때 강퇴 버튼 */}
+                      {isCreator && member.userId !== currentUser?.id && (
+                        <button
+                          onClick={() => handleKick(member.userId)}
+                          className="absolute top-2 right-2 text-red-400 hover:text-red-300 text-xs px-1.5 py-0.5 rounded border border-red-400/40 hover:bg-red-500/10 transition"
+                        >
+                          강퇴
+                        </button>
+                      )}
                       <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg mx-auto mb-2">
                         {member.username.charAt(0).toUpperCase()}
                       </div>

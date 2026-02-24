@@ -61,4 +61,10 @@ public class GameRoom {
         this.winner = winner;
         this.finishedAt = LocalDateTime.now();
     }
+
+    public void reset() {
+        this.status = RoomStatus.WAITING;
+        this.winner = null;
+        this.finishedAt = null;
+    }
 }

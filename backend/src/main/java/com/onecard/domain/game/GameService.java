@@ -103,6 +103,16 @@ public class GameService {
                     player.setDeclaredOneCard(true);
                 }
             }
+            case "SURRENDER" -> {
+                user.incrementLosses();
+                handlePlayerLeave(roomId, user.getId());
+                // 게임이 아직 진행 중이면(3인+ 항복) 해당 플레이어에게 로비 이동 알림
+                GameState afterLeave = gameManager.getGame(roomId);
+                if (afterLeave != null && afterLeave.getPhase() != GamePhase.GAME_OVER) {
+                    sendNotification(username, "SURRENDERED");
+                }
+                return;
+            }
             default -> {
                 sendNotification(username, "알 수 없는 액션입니다.");
                 return;
@@ -229,6 +239,7 @@ public class GameService {
         }
 
         gameManager.removeGame(roomId);
+        gameRoomService.resetRoom(roomId);
     }
 
     private void broadcastGameState(Long roomId, GameState state) {

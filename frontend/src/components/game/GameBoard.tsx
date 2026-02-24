@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGameStore } from '../../store/useGameStore'
 import { useAuthStore } from '../../store/useAuthStore'
+import { getRoom } from '../../api/room'
 import CardComponent from './CardComponent'
 import SuitChooser from './SuitChooser'
 import GameChat from './GameChat'
@@ -20,8 +21,12 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
   const currentUser = useAuthStore((s) => s.currentUser)
   const notification = useGameStore((s) => s.notification)
   const setNotification = useGameStore((s) => s.setNotification)
+  const clearGame = useGameStore((s) => s.clearGame)
+  const setCurrentRoom = useGameStore((s) => s.setCurrentRoom)
   const navigate = useNavigate()
   const [now, setNow] = useState(Date.now())
+  const [showSurrenderConfirm, setShowSurrenderConfirm] = useState(false)
+  const [countdown, setCountdown] = useState<number | null>(null)
 
   // 1초마다 현재 시각 갱신 (타이머 표시용)
   useEffect(() => {
@@ -34,6 +39,28 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
     const timer = setTimeout(() => setNotification(null), 2000)
     return () => clearTimeout(timer)
   }, [notification, setNotification])
+
+  // 3인+ 게임에서 항복 시 로비로 이동
+  useEffect(() => {
+    if (notification !== 'SURRENDERED') return
+    clearGame()
+    navigate('/lobby')
+  }, [notification, clearGame, navigate])
+
+  useEffect(() => {
+    if (!gameState || gameState.phase !== 'GAME_OVER') return
+    setCountdown(5)
+  }, [gameState?.phase])
+
+  useEffect(() => {
+    if (countdown === null) return
+    if (countdown === 0) {
+      handleReturnToWaitingRoom()
+      return
+    }
+    const timer = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000)
+    return () => clearTimeout(timer)
+  }, [countdown])
 
   if (!gameState) return null
 
@@ -66,6 +93,20 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
     sendAction('DECLARE_ONECARD')
   }
 
+  const handleSurrender = () => {
+    sendAction('SURRENDER')
+    setShowSurrenderConfirm(false)
+  }
+
+  const handleReturnToWaitingRoom = async () => {
+    const roomId = gameState?.roomId
+    clearGame()
+    if (roomId) {
+      const updatedRoom = await getRoom(roomId)
+      setCurrentRoom(updatedRoom)
+    }
+  }
+
   const getGraceRemaining = (disconnectedAt: number | null) => {
     if (!disconnectedAt) return null
     const elapsed = Math.floor((now - disconnectedAt) / 1000)
@@ -76,8 +117,16 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
     <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-950 flex flex-row">
       {/* 좌측: 게임 영역 */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* 상단: 상대 플레이어 */}
-        <div className="flex justify-center gap-4 pt-4 px-4">
+        {/* 상단: 상대 플레이어 + 항복 버튼 */}
+        <div className="flex justify-center gap-4 pt-4 px-4 relative">
+          {!isGameOver && (
+            <button
+              onClick={() => setShowSurrenderConfirm(true)}
+              className="absolute right-4 top-0 bg-red-600/70 hover:bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg transition border border-red-400/50"
+            >
+              항복
+            </button>
+          )}
           {opponents.map((opp) => {
             const graceRemaining = getGraceRemaining(opp.disconnectedAt)
             return (
@@ -212,10 +261,34 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
 
       {showSuitChooser && <SuitChooser onChoose={handleChooseSuit} />}
 
-      {/* 토스트 알림 */}
-      {notification && (
+      {/* 토스트 알림 (SURRENDERED는 리다이렉트로 처리하므로 제외) */}
+      {notification && notification !== 'SURRENDERED' && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium z-50 animate-bounce">
           {notification}
+        </div>
+      )}
+
+      {/* 항복 확인 모달 */}
+      {showSurrenderConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-sm w-full">
+            <h2 className="text-xl font-bold mb-2 text-gray-800">정말 항복하시겠습니까?</h2>
+            <p className="text-gray-500 text-sm mb-6">항복하면 패배로 기록됩니다.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowSurrenderConfirm(false)}
+                className="flex-1 py-2.5 border border-gray-300 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSurrender}
+                className="flex-1 py-2.5 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition"
+              >
+                항복
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -226,14 +299,17 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
             <h2 className="text-2xl font-bold mb-2">
               {winner?.userId === currentUser?.id ? '승리!' : '패배...'}
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 mb-2">
               {winner?.username}님이 이겼습니다!
             </p>
+            <p className="text-gray-400 text-sm mb-6">
+              {countdown}초 후 대기방으로 이동합니다
+            </p>
             <button
-              onClick={() => navigate('/lobby')}
-              className="bg-green-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-green-600 transition"
+              onClick={handleReturnToWaitingRoom}
+              className="w-full bg-green-500 text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-green-600 transition"
             >
-              로비로 돌아가기
+              확인
             </button>
           </div>
         </div>

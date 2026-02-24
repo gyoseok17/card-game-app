@@ -50,4 +50,8 @@ public class GameRoomMember {
     public void toggleReady() {
         this.isReady = !this.isReady;
     }
+
+    public void resetReady() {
+        this.isReady = false;
+    }
 }
