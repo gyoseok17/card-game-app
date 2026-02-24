@@ -119,7 +119,12 @@ public class GameEngine {
     }
 
     public void applyTurnTimeout(GameState state) {
-        applyDrawCards(state, state.getCurrentPlayerIndex());
+        if (state.getPhase() == GamePhase.WAITING_FOR_SUIT_CHOICE) {
+            // 문양 미선택 타임아웃: 낸 카드의 문양을 자동 선택
+            applyChooseSuit(state, getTopCard(state).suit());
+        } else {
+            applyDrawCards(state, state.getCurrentPlayerIndex());
+        }
     }
 
     public List<Integer> getPlayableCardIndices(GameState state, int playerIndex) {
