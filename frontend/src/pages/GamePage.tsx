@@ -34,5 +34,5 @@ export default function GamePage() {
     return <GameBoard sendAction={sendAction} sendChat={sendChat} />
   }
 
-  return <WaitingRoom />
+  return <WaitingRoom sendChat={sendChat} />
 }

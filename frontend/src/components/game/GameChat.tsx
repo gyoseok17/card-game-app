@@ -23,18 +23,21 @@ export default function GameChat({ sendChat }: Props) {
   }
 
   return (
-    <div className="fixed right-4 bottom-36 w-72 h-80 bg-white rounded-xl shadow-2xl flex flex-col z-40 overflow-hidden">
-      <div className="bg-green-600 text-white px-3 py-2 text-sm font-semibold">
-        게임 채팅
+    <div className="flex flex-col h-full bg-black/20 border-l border-white/10">
+      <div className="bg-green-900/80 text-white px-3 py-2 text-sm font-semibold border-b border-white/10 shrink-0">
+        채팅
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        {chatMessages.length === 0 && (
+          <p className="text-white/30 text-xs text-center mt-4">아직 메시지가 없습니다</p>
+        )}
         {chatMessages.map((msg, i) => (
           <div key={i} className={msg.senderName === currentUser?.username ? 'text-right' : ''}>
-            <span className="text-xs text-gray-400">{msg.senderName}</span>
-            <p className={`text-sm px-2 py-1 rounded-lg inline-block ${
+            <span className="text-xs text-white/40">{msg.senderName}</span>
+            <p className={`text-sm px-2 py-1 rounded-lg inline-block max-w-full break-words ${
               msg.senderName === currentUser?.username
-                ? 'bg-green-100 text-green-800'
-                : 'bg-gray-100 text-gray-800'
+                ? 'bg-green-500/30 text-green-100'
+                : 'bg-white/10 text-white/90'
             }`}>
               {msg.content}
             </p>
@@ -42,18 +45,18 @@ export default function GameChat({ sendChat }: Props) {
         ))}
         <div ref={bottomRef} />
       </div>
-      <div className="border-t p-2 flex gap-1">
+      <div className="border-t border-white/10 p-2 flex gap-1 shrink-0">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           placeholder="메시지 입력..."
-          className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+          className="flex-1 bg-white/10 border border-white/20 rounded px-2 py-1 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-green-500"
         />
         <button
           onClick={handleSend}
-          className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+          className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-500 transition"
         >
           전송
         </button>
