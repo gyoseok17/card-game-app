@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/rooms")
@@ -45,21 +46,45 @@ public class GameRoomController {
     @PostMapping("/{roomId}/join")
     public ResponseEntity<GameRoomResponse> joinRoom(@PathVariable Long roomId, Authentication auth) {
         User user = userService.findByUsername(auth.getName());
-        return ResponseEntity.ok(gameRoomService.joinRoom(roomId, user));
+        GameRoomResponse response = gameRoomService.joinRoom(roomId, user);
+        messagingTemplate.convertAndSend("/topic/room/" + roomId, response);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{roomId}/leave")
     public ResponseEntity<Void> leaveRoom(@PathVariable Long roomId, Authentication auth) {
         User user = userService.findByUsername(auth.getName());
+        GameRoom room = gameRoomService.findById(roomId);
+        boolean isCreator = room.getCreatedBy().getId().equals(user.getId());
+
+        // 방장이 나갈 경우 삭제 전에 남은 멤버 목록 저장
+        List<String> otherUsernames = isCreator
+                ? gameRoomService.getMembers(roomId).stream()
+                    .map(m -> m.getUser().getUsername())
+                    .filter(name -> !name.equals(user.getUsername()))
+                    .toList()
+                : List.of();
+
         gameService.handlePlayerLeave(roomId, user.getId());
         gameRoomService.leaveRoom(roomId, user.getId());
+
+        if (isCreator) {
+            // 방 삭제됨 → 남은 멤버들에게 ROOM_CLOSED 알림
+            otherUsernames.forEach(name ->
+                messagingTemplate.convertAndSendToUser(name, "/queue/notification", Map.of("message", "ROOM_CLOSED"))
+            );
+        } else {
+            messagingTemplate.convertAndSend("/topic/room/" + roomId, gameRoomService.getRoom(roomId));
+        }
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{roomId}/ready")
     public ResponseEntity<GameRoomResponse> toggleReady(@PathVariable Long roomId, Authentication auth) {
         User user = userService.findByUsername(auth.getName());
-        return ResponseEntity.ok(gameRoomService.toggleReady(roomId, user.getId()));
+        GameRoomResponse response = gameRoomService.toggleReady(roomId, user.getId());
+        messagingTemplate.convertAndSend("/topic/room/" + roomId, response);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{roomId}/start")
@@ -75,10 +100,8 @@ public class GameRoomController {
         User requester = userService.findByUsername(auth.getName());
         User target = userService.findById(targetUserId);
         GameRoomResponse updatedRoom = gameRoomService.kickPlayer(roomId, requester.getId(), targetUserId);
-        messagingTemplate.convertAndSendToUser(
-                target.getUsername(), "/queue/notification",
-                java.util.Map.of("message", "KICKED")
-        );
+        messagingTemplate.convertAndSendToUser(target.getUsername(), "/queue/notification", Map.of("message", "KICKED"));
+        messagingTemplate.convertAndSend("/topic/room/" + roomId, updatedRoom);
         return ResponseEntity.ok(updatedRoom);
     }
 }

@@ -16,9 +16,9 @@ export default function WaitingRoom({ sendChat }: Props) {
   const currentUser = useAuthStore((s) => s.currentUser)
   const navigate = useNavigate()
 
-  // 강퇴당했을 때 로비로 이동
+  // 강퇴당하거나 방이 삭제됐을 때 로비로 이동
   useEffect(() => {
-    if (notification === 'KICKED') {
+    if (notification === 'KICKED' || notification === 'ROOM_CLOSED') {
       navigate('/lobby')
     }
   }, [notification, navigate])

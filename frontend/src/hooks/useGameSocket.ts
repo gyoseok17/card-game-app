@@ -8,6 +8,7 @@ import type { GameState, Card, ChatMessage } from '../types'
 export function useGameSocket(roomId: number | null) {
   const clientRef = useRef<Client | null>(null)
   const token = useAuthStore((s) => s.token)
+  const setCurrentRoom = useGameStore((s) => s.setCurrentRoom)
   const setGameState = useGameStore((s) => s.setGameState)
   const setMyHand = useGameStore((s) => s.setMyHand)
   const appendChat = useGameStore((s) => s.appendChat)
@@ -21,6 +22,12 @@ export function useGameSocket(roomId: number | null) {
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       onConnect: () => {
+        // 방 상태 구독 (입장·준비·나가기 실시간 반영)
+        client.subscribe(`/topic/room/${roomId}`, (frame) => {
+          const room = JSON.parse(frame.body)
+          setCurrentRoom(room)
+        })
+
         // 게임 상태 구독
         client.subscribe(`/topic/game/${roomId}`, (frame) => {
           const state: GameState = JSON.parse(frame.body)
@@ -69,7 +76,7 @@ export function useGameSocket(roomId: number | null) {
       client.deactivate()
       clientRef.current = null
     }
-  }, [token, roomId, setGameState, setMyHand, appendChat, setNotification])
+  }, [token, roomId, setCurrentRoom, setGameState, setMyHand, appendChat, setNotification])
 
   const sendAction = useCallback((actionType: string, cardIndex?: number, chosenSuit?: string) => {
     if (!clientRef.current?.connected || !roomId) return
