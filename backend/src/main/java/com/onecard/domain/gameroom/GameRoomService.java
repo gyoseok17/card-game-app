@@ -76,6 +76,11 @@ public class GameRoomService {
     }
 
     @Transactional
+    public void removeMember(Long roomId, Long userId) {
+        memberRepository.deleteByRoomIdAndUserId(roomId, userId);
+    }
+
+    @Transactional
     public GameRoomResponse kickPlayer(Long roomId, Long requesterId, Long targetId) {
         GameRoom room = findById(roomId);
         if (!room.getCreatedBy().getId().equals(requesterId)) {

@@ -62,7 +62,7 @@ export default function WaitingRoom({ sendChat }: Props) {
           {/* 플레이어 슬롯 */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             {Array.from({ length: currentRoom.maxPlayers }).map((_, i) => {
-              const member = currentRoom.members.find((m) => m.seatOrder === i)
+              const member = currentRoom.members[i] ?? null
               return (
                 <div
                   key={i}

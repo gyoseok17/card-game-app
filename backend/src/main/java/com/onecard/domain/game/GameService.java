@@ -106,9 +106,10 @@ public class GameService {
             case "SURRENDER" -> {
                 user.incrementLosses();
                 handlePlayerLeave(roomId, user.getId());
-                // 게임이 아직 진행 중이면(3인+ 항복) 해당 플레이어에게 로비 이동 알림
+                // 게임이 아직 진행 중이면(3인+ 항복) 방 멤버에서도 제거 후 로비 이동 알림
                 GameState afterLeave = gameManager.getGame(roomId);
                 if (afterLeave != null && afterLeave.getPhase() != GamePhase.GAME_OVER) {
+                    gameRoomService.removeMember(roomId, user.getId());
                     sendNotification(username, "SURRENDERED");
                 }
                 return;
