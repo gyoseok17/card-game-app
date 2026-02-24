@@ -18,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 import java.util.List;
 
 @Slf4j
@@ -53,6 +55,7 @@ public class GameService {
         }
 
         scheduleTurnIfNeeded(roomId, state);
+        sendSystemChat(roomId, "게임이 시작되었습니다!");
         log.info("Game started in room {} with {} players", roomId, players.size());
     }
 
@@ -105,6 +108,7 @@ public class GameService {
             }
             case "SURRENDER" -> {
                 user.incrementLosses();
+                sendSystemChat(roomId, username + "님이 항복했습니다.");
                 handlePlayerLeave(roomId, user.getId());
                 // 게임이 아직 진행 중이면(3인+ 항복) 방 멤버에서도 제거 후 로비 이동 알림
                 GameState afterLeave = gameManager.getGame(roomId);
@@ -268,5 +272,13 @@ public class GameService {
         messagingTemplate.convertAndSendToUser(
                 username, "/queue/notification", java.util.Map.of("message", message)
         );
+    }
+
+    private void sendSystemChat(Long roomId, String content) {
+        messagingTemplate.convertAndSend("/topic/game/" + roomId + "/chat", java.util.Map.of(
+                "type", "SYSTEM",
+                "content", content,
+                "sentAt", LocalDateTime.now().toString()
+        ));
     }
 }

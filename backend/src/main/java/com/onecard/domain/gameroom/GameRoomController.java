@@ -13,6 +13,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -48,7 +49,16 @@ public class GameRoomController {
         User user = userService.findByUsername(auth.getName());
         GameRoomResponse response = gameRoomService.joinRoom(roomId, user);
         messagingTemplate.convertAndSend("/topic/room/" + roomId, response);
+        sendSystemChat(roomId, user.getUsername() + "님이 입장했습니다.");
         return ResponseEntity.ok(response);
+    }
+
+    private void sendSystemChat(Long roomId, String content) {
+        messagingTemplate.convertAndSend("/topic/game/" + roomId + "/chat", Map.of(
+                "type", "SYSTEM",
+                "content", content,
+                "sentAt", LocalDateTime.now().toString()
+        ));
     }
 
     @PostMapping("/{roomId}/leave")
@@ -69,11 +79,12 @@ public class GameRoomController {
         gameRoomService.leaveRoom(roomId, user.getId());
 
         if (isCreator) {
-            // 방 삭제됨 → 남은 멤버들에게 ROOM_CLOSED 알림
+            sendSystemChat(roomId, user.getUsername() + "님(방장)이 퇴장하여 방이 닫힙니다.");
             otherUsernames.forEach(name ->
                 messagingTemplate.convertAndSendToUser(name, "/queue/notification", Map.of("message", "ROOM_CLOSED"))
             );
         } else {
+            sendSystemChat(roomId, user.getUsername() + "님이 퇴장했습니다.");
             messagingTemplate.convertAndSend("/topic/room/" + roomId, gameRoomService.getRoom(roomId));
         }
         return ResponseEntity.ok().build();
@@ -102,6 +113,7 @@ public class GameRoomController {
         GameRoomResponse updatedRoom = gameRoomService.kickPlayer(roomId, requester.getId(), targetUserId);
         messagingTemplate.convertAndSendToUser(target.getUsername(), "/queue/notification", Map.of("message", "KICKED"));
         messagingTemplate.convertAndSend("/topic/room/" + roomId, updatedRoom);
+        sendSystemChat(roomId, target.getUsername() + "님이 강퇴되었습니다.");
         return ResponseEntity.ok(updatedRoom);
     }
 }

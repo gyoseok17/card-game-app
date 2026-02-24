@@ -6,6 +6,11 @@ interface Props {
   sendChat: (content: string) => void
 }
 
+const formatTime = (sentAt: string) => {
+  const d = new Date(sentAt)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 export default function GameChat({ sendChat }: Props) {
   const chatMessages = useGameStore((s) => s.chatMessages)
   const currentUser = useAuthStore((s) => s.currentUser)
@@ -31,18 +36,31 @@ export default function GameChat({ sendChat }: Props) {
         {chatMessages.length === 0 && (
           <p className="text-white/30 text-xs text-center mt-4">아직 메시지가 없습니다</p>
         )}
-        {chatMessages.map((msg, i) => (
-          <div key={i} className={msg.senderName === currentUser?.username ? 'text-right' : ''}>
-            <span className="text-xs text-white/40">{msg.senderName}</span>
-            <p className={`text-sm px-2 py-1 rounded-lg inline-block max-w-full break-words ${
-              msg.senderName === currentUser?.username
-                ? 'bg-green-500/30 text-green-100'
-                : 'bg-white/10 text-white/90'
-            }`}>
-              {msg.content}
-            </p>
-          </div>
-        ))}
+        {chatMessages.map((msg, i) =>
+          msg.type === 'SYSTEM' ? (
+            <div key={i} className="text-center">
+              <span className="text-xs text-yellow-300/70 bg-white/5 px-2 py-0.5 rounded-full">
+                {msg.content}
+              </span>
+              <span className="block text-xs text-white/20 mt-0.5">{formatTime(msg.sentAt)}</span>
+            </div>
+          ) : (
+            <div key={i} className={msg.senderName === currentUser?.username ? 'text-right' : ''}>
+              <div className="flex items-baseline gap-1 mb-0.5 flex-wrap"
+                style={{ justifyContent: msg.senderName === currentUser?.username ? 'flex-end' : 'flex-start' }}>
+                <span className="text-xs text-white/40">{msg.senderName}</span>
+                <span className="text-xs text-white/20">{formatTime(msg.sentAt)}</span>
+              </div>
+              <p className={`text-sm px-2 py-1 rounded-lg inline-block max-w-full break-words ${
+                msg.senderName === currentUser?.username
+                  ? 'bg-green-500/30 text-green-100'
+                  : 'bg-white/10 text-white/90'
+              }`}>
+                {msg.content}
+              </p>
+            </div>
+          )
+        )}
         <div ref={bottomRef} />
       </div>
       <div className="border-t border-white/10 p-2 flex gap-1 shrink-0">

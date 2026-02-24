@@ -22,6 +22,7 @@ public class GameChatController {
                            @Payload Map<String, String> payload,
                            Principal principal) {
         Map<String, Object> message = Map.of(
+                "type", "CHAT",
                 "senderName", principal.getName(),
                 "content", payload.get("content"),
                 "sentAt", LocalDateTime.now().toString()

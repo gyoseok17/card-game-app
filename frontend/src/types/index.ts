@@ -73,8 +73,9 @@ export interface GameState {
 }
 
 export interface ChatMessage {
-  senderId: number
-  senderName: string
+  type: 'CHAT' | 'SYSTEM'
+  senderId?: number
+  senderName?: string
   content: string
   sentAt: string
 }
