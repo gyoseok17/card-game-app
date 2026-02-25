@@ -64,13 +64,18 @@ public class GameRoomService {
             return getRoom(roomId);
         }
 
-        long count = memberRepository.countByRoomId(roomId);
-        if (count >= room.getMaxPlayers()) {
+        List<GameRoomMember> members = memberRepository.findByRoomIdWithUser(roomId);
+        if (members.size() >= room.getMaxPlayers()) {
             throw new IllegalArgumentException("Room is full");
         }
 
+        int nextSeatOrder = members.stream()
+                .mapToInt(GameRoomMember::getSeatOrder)
+                .max()
+                .orElse(-1) + 1;
+
         memberRepository.save(
-                GameRoomMember.builder().room(room).user(user).seatOrder((int) count).build()
+                GameRoomMember.builder().room(room).user(user).seatOrder(nextSeatOrder).build()
         );
         return getRoom(roomId);
     }
