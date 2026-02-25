@@ -10,6 +10,7 @@ public class UserResponse {
     private final String email;
     private final int wins;
     private final int losses;
+    private final int points;
 
     public UserResponse(User user) {
         this.id = user.getId();
@@ -17,5 +18,6 @@ public class UserResponse {
         this.email = user.getEmail();
         this.wins = user.getWins();
         this.losses = user.getLosses();
+        this.points = user.getPoints();
     }
 }

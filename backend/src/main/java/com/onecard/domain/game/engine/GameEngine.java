@@ -42,6 +42,7 @@ public class GameEngine {
         state.getDiscardPile().add(firstCard);
         state.setCurrentPlayerIndex(0);
         state.setTurnStartedAt(System.currentTimeMillis());
+        state.setInitialPlayerCount(players.size());
 
         return state;
     }

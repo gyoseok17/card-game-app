@@ -21,6 +21,7 @@ public class GameState {
     private GamePhase phase;
     private long turnStartedAt;
     private Long winnerId;
+    private int initialPlayerCount;
 
     public PlayerState getCurrentPlayer() {
         return players.get(currentPlayerIndex);

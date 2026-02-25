@@ -4,6 +4,7 @@ export interface User {
   email: string
   wins: number
   losses: number
+  points: number
 }
 
 export interface AuthResponse {

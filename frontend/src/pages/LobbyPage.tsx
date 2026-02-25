@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRooms, createRoom, joinRoom } from '../api/room'
+import { getMe } from '../api/auth'
 import { useAuthStore } from '../store/useAuthStore'
 import { useLobbyStore } from '../store/useLobbyStore'
 import { useGameStore } from '../store/useGameStore'
@@ -8,6 +9,8 @@ import type { GameRoomSummary } from '../types'
 
 export default function LobbyPage() {
   const currentUser = useAuthStore((s) => s.currentUser)
+  const setAuth = useAuthStore((s) => s.setAuth)
+  const token = useAuthStore((s) => s.token)
   const logout = useAuthStore((s) => s.logout)
   const clearGame = useGameStore((s) => s.clearGame)
   const { rooms, setRooms } = useLobbyStore()
@@ -20,7 +23,8 @@ export default function LobbyPage() {
 
   useEffect(() => {
     getRooms().then(setRooms).catch(console.error)
-  }, [setRooms])
+    getMe().then((user) => { if (token) setAuth(token, user) }).catch(() => {})
+  }, [setRooms, token, setAuth])
 
   useEffect(() => {
     if (!error) return
@@ -67,7 +71,7 @@ export default function LobbyPage() {
         <h1 className="text-xl font-bold text-white">OneCard Game</h1>
         <div className="flex items-center gap-4">
           <span className="text-green-200 text-sm">
-            {currentUser?.username} ({currentUser?.wins}승 {currentUser?.losses}패)
+            {currentUser?.username} ({currentUser?.points}P)
           </span>
           <button onClick={handleLogout} className="text-green-300 hover:text-white text-sm">
             로그아웃

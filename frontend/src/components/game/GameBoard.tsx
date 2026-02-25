@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useGameStore } from '../../store/useGameStore'
 import { useAuthStore } from '../../store/useAuthStore'
 import { getRoom } from '../../api/room'
+import { getMe } from '../../api/auth'
 import CardComponent from './CardComponent'
 import SuitChooser from './SuitChooser'
 import GameChat from './GameChat'
@@ -23,6 +24,8 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
   const setNotification = useGameStore((s) => s.setNotification)
   const clearGame = useGameStore((s) => s.clearGame)
   const setCurrentRoom = useGameStore((s) => s.setCurrentRoom)
+  const setAuth = useAuthStore((s) => s.setAuth)
+  const token = useAuthStore((s) => s.token)
   const navigate = useNavigate()
   const [now, setNow] = useState(Date.now())
   const [showSurrenderConfirm, setShowSurrenderConfirm] = useState(false)
@@ -44,8 +47,9 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
   useEffect(() => {
     if (notification !== 'SURRENDERED') return
     clearGame()
+    getMe().then((user) => { if (token) setAuth(token, user) }).catch(() => {})
     navigate('/lobby')
-  }, [notification, clearGame, navigate])
+  }, [notification, clearGame, navigate, token, setAuth])
 
   useEffect(() => {
     if (!gameState || gameState.phase !== 'GAME_OVER') return
@@ -110,9 +114,17 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
     setShowSurrenderConfirm(false)
   }
 
+  const refreshUser = async () => {
+    try {
+      const user = await getMe()
+      if (token) setAuth(token, user)
+    } catch { /* ignore */ }
+  }
+
   const handleReturnToWaitingRoom = async () => {
     const roomId = gameState?.roomId
     clearGame()
+    await refreshUser()
     if (roomId) {
       const updatedRoom = await getRoom(roomId)
       setCurrentRoom(updatedRoom)

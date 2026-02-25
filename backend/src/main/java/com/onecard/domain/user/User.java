@@ -33,6 +33,9 @@ public class User {
     @Column(nullable = false)
     private int losses = 0;
 
+    @Column(nullable = false)
+    private int points = 1000;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -46,4 +49,5 @@ public class User {
 
     public void incrementWins() { this.wins++; }
     public void incrementLosses() { this.losses++; }
+    public void addPoints(int amount) { this.points += amount; }
 }

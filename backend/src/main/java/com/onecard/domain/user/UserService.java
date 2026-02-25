@@ -47,4 +47,9 @@ public class UserService {
     public List<User> searchUsers(String keyword) {
         return userRepository.findByUsernameContainingIgnoreCase(keyword);
     }
+
+    @Transactional
+    public User save(User user) {
+        return userRepository.save(user);
+    }
 }

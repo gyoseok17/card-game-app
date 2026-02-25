@@ -107,7 +107,6 @@ public class GameService {
                 }
             }
             case "SURRENDER" -> {
-                user.incrementLosses();
                 sendSystemChat(roomId, username + "님이 항복했습니다.");
                 handlePlayerLeave(roomId, user.getId());
                 // 게임이 아직 진행 중이면(3인+ 항복) 방 멤버에서도 제거 후 로비 이동 알림
@@ -230,17 +229,30 @@ public class GameService {
         turnTimerScheduler.scheduleTurnTimer(roomId, () -> handleTimeout(roomId), TURN_TIMEOUT_SECONDS);
     }
 
+    // POINT_REWARDS[인원수][등수] — 인원수 인덱스: 0=2인, 1=3인, 2=4인
+    private static final int[][] POINT_REWARDS = {
+            {100, 30},           // 2인: 1등 100, 2등 30
+            {150, 60, 30},       // 3인: 1등 150, 2등 60, 3등 30
+            {200, 90, 50, 30}    // 4인: 1등 200, 2등 90, 3등 50, 4등 30
+    };
+
     private void handleGameOver(Long roomId, GameState state) {
         log.info("Game over in room {}. Winner: {}", roomId, state.getWinnerId());
 
-        // 승/패 업데이트
-        for (PlayerState player : state.getPlayers()) {
+        // 남은 카드 수 기준 등수 정렬 (승자는 0장이므로 자동 1등)
+        List<PlayerState> ranked = state.getPlayers().stream()
+                .sorted(java.util.Comparator.comparingInt(PlayerState::handSize))
+                .toList();
+
+        int tableIndex = Math.min(state.getInitialPlayerCount(), 4) - 2; // 2인→0, 3인→1, 4인→2
+        int[] rewards = POINT_REWARDS[Math.max(0, tableIndex)];
+
+        for (int i = 0; i < ranked.size(); i++) {
+            PlayerState player = ranked.get(i);
             User user = userService.findById(player.getUserId());
-            if (player.getUserId().equals(state.getWinnerId())) {
-                user.incrementWins();
-            } else {
-                user.incrementLosses();
-            }
+            int points = i < rewards.length ? rewards[i] : rewards[rewards.length - 1];
+            user.addPoints(points);
+            userService.save(user);
         }
 
         gameManager.removeGame(roomId);
