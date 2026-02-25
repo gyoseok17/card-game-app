@@ -19,6 +19,7 @@ public class GameStateResponse {
     private String activeSuit;
     private int attackStack;
     private int deckRemaining;
+    private int discardPileSize;
     private List<PublicPlayerInfo> players;
     private long turnStartedAt;
     private Long winnerId;
@@ -34,6 +35,7 @@ public class GameStateResponse {
                 state.getActiveSuit() != null ? state.getActiveSuit().name() : null,
                 state.getAttackStack(),
                 state.getDeck().size(),
+                state.getDiscardPile().size(),
                 state.getPlayers().stream().map(PublicPlayerInfo::from).toList(),
                 state.getTurnStartedAt(),
                 state.getWinnerId()

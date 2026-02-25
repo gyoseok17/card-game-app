@@ -66,10 +66,22 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
 
   const myIndex = gameState.players.findIndex((p) => p.userId === currentUser?.id)
   const isMyTurn = gameState.currentPlayerIndex === myIndex
-  const opponents = gameState.players.filter((p) => p.userId !== currentUser?.id)
   const showSuitChooser = gameState.phase === 'WAITING_FOR_SUIT_CHOICE' && isMyTurn
   const isGameOver = gameState.phase === 'GAME_OVER'
   const winner = isGameOver ? gameState.players.find((p) => p.userId === gameState.winnerId) : null
+
+  // 나 기준 시계방향으로 상대 배열 생성
+  const totalPlayers = gameState.players.length
+  const orderedOpponents: typeof gameState.players = []
+  for (let i = 1; i < totalPlayers; i++) {
+    const idx = (myIndex + i) % totalPlayers
+    orderedOpponents.push(gameState.players[idx])
+  }
+
+  // 동서남북 배치: 서(다음 턴) → 북(맞은편) → 동(이전 턴)
+  const west = totalPlayers >= 3 ? orderedOpponents[0] : null
+  const north = totalPlayers === 2 ? orderedOpponents[0] : totalPlayers >= 3 ? orderedOpponents[1] : null
+  const east = totalPlayers >= 4 ? orderedOpponents[2] : null
 
   // 턴 남은 시간 계산
   const turnElapsed = Math.floor((now - gameState.turnStartedAt) / 1000)
@@ -113,65 +125,72 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
     return Math.max(0, GRACE_PERIOD - elapsed)
   }
 
+  const renderOpponent = (opp: typeof gameState.players[number]) => {
+    const graceRemaining = getGraceRemaining(opp.disconnectedAt)
+    return (
+      <div
+        key={opp.userId}
+        className={`bg-white/10 backdrop-blur rounded-xl px-5 py-3 text-center border transition-all ${
+          gameState.currentPlayerId === opp.userId
+            ? 'border-yellow-400 shadow-lg shadow-yellow-400/20 scale-105'
+            : 'border-white/10'
+        }`}
+      >
+        <div className="relative inline-block">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold mx-auto mb-1 ${
+            opp.connected ? 'bg-blue-500' : 'bg-red-500'
+          }`}>
+            {opp.username.charAt(0).toUpperCase()}
+          </div>
+          <div className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border border-white/50 ${
+            opp.connected ? 'bg-blue-400' : 'bg-red-400 animate-pulse'
+          }`} />
+        </div>
+        <p className="text-white font-medium text-sm">{opp.username}</p>
+        <p className="text-green-300 text-xs">{opp.handSize}장</p>
+        {opp.declaredOneCard && (
+          <span className="text-yellow-400 text-xs font-bold block">ONE CARD!</span>
+        )}
+        {!opp.connected && graceRemaining !== null && (
+          <span className="text-red-300 text-xs font-bold block">{graceRemaining}초</span>
+        )}
+        {gameState.currentPlayerId === opp.userId && !isGameOver && (
+          <span className={`text-xs font-bold block mt-1 ${
+            turnRemaining <= 5 ? 'text-red-400 animate-pulse' : 'text-yellow-300'
+          }`}>
+            {turnRemaining}초
+          </span>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-950 flex flex-row">
-      {/* 좌측: 게임 영역 */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* 상단: 상대 플레이어 + 항복 버튼 */}
-        <div className="flex justify-center gap-4 pt-4 px-4 relative">
-          {!isGameOver && (
-            <button
-              onClick={() => setShowSurrenderConfirm(true)}
-              className="absolute right-4 top-0 bg-red-600/70 hover:bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg transition border border-red-400/50"
-            >
-              항복
-            </button>
-          )}
-          {opponents.map((opp) => {
-            const graceRemaining = getGraceRemaining(opp.disconnectedAt)
-            return (
-              <div
-                key={opp.userId}
-                className={`bg-white/10 backdrop-blur rounded-xl px-5 py-3 text-center border transition-all ${
-                  gameState.currentPlayerId === opp.userId
-                    ? 'border-yellow-400 shadow-lg shadow-yellow-400/20 scale-105'
-                    : 'border-white/10'
-                }`}
-              >
-                <div className="relative">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold mx-auto mb-1 ${
-                    opp.connected ? 'bg-blue-500' : 'bg-red-500'
-                  }`}>
-                    {opp.username.charAt(0).toUpperCase()}
-                  </div>
-                  {/* 연결 상태 점 */}
-                  <div className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border border-white/50 ${
-                    opp.connected ? 'bg-blue-400' : 'bg-red-400 animate-pulse'
-                  }`} />
-                </div>
-                <p className="text-white font-medium text-sm">{opp.username}</p>
-                <p className="text-green-300 text-xs">{opp.handSize}장</p>
-                {opp.declaredOneCard && (
-                  <span className="text-yellow-400 text-xs font-bold block">ONE CARD!</span>
-                )}
-                {!opp.connected && graceRemaining !== null && (
-                  <span className="text-red-300 text-xs font-bold block">{graceRemaining}초</span>
-                )}
-                {/* 해당 플레이어 차례일 때 턴 타이머 */}
-                {gameState.currentPlayerId === opp.userId && !isGameOver && (
-                  <span className={`text-xs font-bold block mt-1 ${
-                    turnRemaining <= 5 ? 'text-red-400 animate-pulse' : 'text-yellow-300'
-                  }`}>
-                    {turnRemaining}초
-                  </span>
-                )}
-              </div>
-            )
-          })}
+      {/* 게임 영역: 3x3 그리드 */}
+      <div className="flex-1 grid grid-rows-[auto_1fr_auto] grid-cols-[auto_1fr_auto] min-w-0 relative">
+        {/* 항복 버튼 */}
+        {!isGameOver && (
+          <button
+            onClick={() => setShowSurrenderConfirm(true)}
+            className="absolute right-4 top-4 bg-red-600/70 hover:bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg transition border border-red-400/50 z-10"
+          >
+            항복
+          </button>
+        )}
+
+        {/* 북(상단): 맞은편 상대 */}
+        <div className="col-start-2 row-start-1 flex justify-center pt-4 px-4">
+          {north && renderOpponent(north)}
+        </div>
+
+        {/* 서(왼쪽): 다음 턴 플레이어 */}
+        <div className="col-start-1 row-start-2 flex items-center justify-center px-4">
+          {west && renderOpponent(west)}
         </div>
 
         {/* 중앙: 게임 테이블 */}
-        <div className="flex-1 flex items-center justify-center gap-8">
+        <div className="col-start-2 row-start-2 flex items-center justify-center gap-8">
           {/* 덱 (드로우) */}
           <div className="text-center">
             <div
@@ -192,6 +211,7 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
           {/* 버린 카드 더미 */}
           <div className="text-center">
             <CardComponent card={gameState.topCard} size="lg" />
+            <span className="text-blue-300 text-xs">{gameState.discardPileSize}장</span>
             {gameState.activeSuit && (
               <p className="text-yellow-300 text-sm mt-2 font-medium">
                 선택된 문양: {
@@ -214,42 +234,50 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
           </div>
         </div>
 
-        {/* 턴 / 원카드 선언 */}
-        <div className="text-center pb-2 flex items-center justify-center gap-3">
-          {isMyTurn && !isGameOver && (
-            <>
-              <span className="bg-yellow-500 text-black px-4 py-1 rounded-full text-sm font-bold animate-pulse">
-                내 차례!
-              </span>
-              <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-                turnRemaining <= 5 ? 'bg-red-500 text-white animate-pulse' : 'bg-white/20 text-white'
-              }`}>
-                {turnRemaining}초
-              </span>
-            </>
-          )}
-          {myHand.length === 1 && (
-            <button
-              onClick={handleDeclareOneCard}
-              className="bg-red-500 text-white px-4 py-1 rounded-full text-sm font-bold hover:bg-red-400 transition"
-            >
-              원카드!
-            </button>
-          )}
+        {/* 동(오른쪽): 이전 턴 플레이어 */}
+        <div className="col-start-3 row-start-2 flex items-center justify-center px-4">
+          {east && renderOpponent(east)}
         </div>
 
-        {/* 내 손패 */}
-        <div className="bg-black/30 backdrop-blur border-t border-white/10 p-4">
-          <div className="flex justify-center gap-1 flex-wrap max-w-4xl mx-auto">
-            {myHand.map((card, index) => (
-              <CardComponent
-                key={`${card.suit}-${card.rank}-${index}`}
-                card={card}
-                size="md"
-                clickable={isMyTurn && gameState.phase === 'WAITING_FOR_PLAY'}
-                onClick={() => handlePlayCard(index)}
-              />
-            ))}
+        {/* 남(하단): 내 턴 표시 + 손패 */}
+        <div className="col-span-3 row-start-3">
+          {/* 턴 / 원카드 선언 */}
+          <div className="text-center pb-2 flex items-center justify-center gap-3">
+            {isMyTurn && !isGameOver && (
+              <>
+                <span className="bg-yellow-500 text-black px-4 py-1 rounded-full text-sm font-bold animate-pulse">
+                  내 차례!
+                </span>
+                <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                  turnRemaining <= 5 ? 'bg-red-500 text-white animate-pulse' : 'bg-white/20 text-white'
+                }`}>
+                  {turnRemaining}초
+                </span>
+              </>
+            )}
+            {myHand.length === 1 && (
+              <button
+                onClick={handleDeclareOneCard}
+                className="bg-red-500 text-white px-4 py-1 rounded-full text-sm font-bold hover:bg-red-400 transition"
+              >
+                원카드!
+              </button>
+            )}
+          </div>
+
+          {/* 내 손패 */}
+          <div className="bg-black/30 backdrop-blur border-t border-white/10 p-4">
+            <div className="flex justify-center gap-1 flex-wrap max-w-4xl mx-auto">
+              {myHand.map((card, index) => (
+                <CardComponent
+                  key={`${card.suit}-${card.rank}-${index}`}
+                  card={card}
+                  size="md"
+                  clickable={isMyTurn && gameState.phase === 'WAITING_FOR_PLAY'}
+                  onClick={() => handlePlayCard(index)}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>

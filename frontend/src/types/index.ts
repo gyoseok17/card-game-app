@@ -67,6 +67,7 @@ export interface GameState {
   activeSuit: string | null
   attackStack: number
   deckRemaining: number
+  discardPileSize: number
   players: PublicPlayerInfo[]
   turnStartedAt: number
   winnerId: number | null
