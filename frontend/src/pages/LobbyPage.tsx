@@ -16,10 +16,17 @@ export default function LobbyPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [roomName, setRoomName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(4)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     getRooms().then(setRooms).catch(console.error)
   }, [setRooms])
+
+  useEffect(() => {
+    if (!error) return
+    const timer = setTimeout(() => setError(null), 3000)
+    return () => clearTimeout(timer)
+  }, [error])
 
   const handleCreate = async () => {
     if (!roomName.trim()) return
@@ -38,8 +45,13 @@ export default function LobbyPage() {
   }
 
   const handleJoin = async (room: GameRoomSummary) => {
-    await joinRoom(room.id)
-    navigate(`/game/${room.id}`)
+    try {
+      await joinRoom(room.id)
+      navigate(`/game/${room.id}`)
+    } catch (err: any) {
+      const msg = err.response?.data?.message || '방 입장에 실패했습니다.'
+      setError(msg)
+    }
   }
 
   const handleLogout = () => {
@@ -153,6 +165,12 @@ export default function LobbyPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium z-50">
+          {error}
         </div>
       )}
     </div>

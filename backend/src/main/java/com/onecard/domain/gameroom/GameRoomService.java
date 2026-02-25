@@ -58,7 +58,7 @@ public class GameRoomService {
         GameRoom room = findById(roomId);
 
         if (room.getStatus() != RoomStatus.WAITING) {
-            throw new IllegalArgumentException("Room is not in WAITING status");
+            throw new IllegalArgumentException("이미 게임이 진행 중인 방입니다.");
         }
         if (memberRepository.existsByRoomIdAndUserId(roomId, user.getId())) {
             return getRoom(roomId);
@@ -66,7 +66,7 @@ public class GameRoomService {
 
         List<GameRoomMember> members = memberRepository.findByRoomIdWithUser(roomId);
         if (members.size() >= room.getMaxPlayers()) {
-            throw new IllegalArgumentException("Room is full");
+            throw new IllegalArgumentException("방이 꽉 찼습니다.");
         }
 
         int nextSeatOrder = members.stream()
@@ -115,7 +115,7 @@ public class GameRoomService {
     @Transactional
     public GameRoomResponse toggleReady(Long roomId, Long userId) {
         GameRoomMember member = memberRepository.findByRoomIdAndUserId(roomId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("Not a member"));
+                .orElseThrow(() -> new IllegalArgumentException("방 멤버가 아닙니다."));
         member.toggleReady();
         return getRoom(roomId);
     }
@@ -125,22 +125,22 @@ public class GameRoomService {
         GameRoom room = findById(roomId);
 
         if (!room.getCreatedBy().getId().equals(userId)) {
-            throw new IllegalArgumentException("Only the room creator can start the game");
+            throw new IllegalArgumentException("방장만 게임을 시작할 수 있습니다.");
         }
         if (room.getStatus() != RoomStatus.WAITING) {
-            throw new IllegalArgumentException("Room is not in WAITING status");
+            throw new IllegalArgumentException("이미 게임이 진행 중인 방입니다.");
         }
 
         List<GameRoomMember> members = memberRepository.findByRoomIdWithUser(roomId);
         if (members.size() < 2) {
-            throw new IllegalArgumentException("Need at least 2 players");
+            throw new IllegalArgumentException("최소 2명 이상이어야 시작할 수 있습니다.");
         }
 
         boolean allReady = members.stream()
                 .filter(m -> !m.getUser().getId().equals(room.getCreatedBy().getId()))
                 .allMatch(GameRoomMember::isReady);
         if (!allReady) {
-            throw new IllegalArgumentException("Not all players are ready");
+            throw new IllegalArgumentException("모든 플레이어가 준비되지 않았습니다.");
         }
 
         room.start();
@@ -156,7 +156,7 @@ public class GameRoomService {
 
     public GameRoom findById(Long roomId) {
         return gameRoomRepository.findById(roomId)
-                .orElseThrow(() -> new IllegalArgumentException("Room not found: " + roomId));
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 방입니다."));
     }
 
     public List<GameRoomMember> getMembers(Long roomId) {

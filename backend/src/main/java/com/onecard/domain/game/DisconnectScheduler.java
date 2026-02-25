@@ -1,5 +1,6 @@
 package com.onecard.domain.game;
 
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -33,5 +34,10 @@ public class DisconnectScheduler {
             future.cancel(false);
             log.info("Cancelled scheduled leave for user {}", userId);
         }
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        scheduler.shutdownNow();
     }
 }

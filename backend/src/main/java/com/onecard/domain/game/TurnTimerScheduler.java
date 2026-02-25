@@ -1,5 +1,6 @@
 package com.onecard.domain.game;
 
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -31,5 +32,10 @@ public class TurnTimerScheduler {
         if (future != null) {
             future.cancel(false);
         }
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        scheduler.shutdownNow();
     }
 }

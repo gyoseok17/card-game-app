@@ -241,6 +241,15 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
 
         {/* 남(하단): 내 턴 표시 + 손패 */}
         <div className="col-span-3 row-start-3">
+          {/* 알림 메시지 */}
+          {notification && notification !== 'SURRENDERED' && (
+            <div className="text-center py-1">
+              <span className="bg-red-500/90 text-white px-4 py-1.5 rounded-full text-sm font-medium inline-block">
+                {notification}
+              </span>
+            </div>
+          )}
+
           {/* 턴 / 원카드 선언 */}
           <div className="text-center pb-2 flex items-center justify-center gap-3">
             {isMyTurn && !isGameOver && (
@@ -288,13 +297,6 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
       </div>
 
       {showSuitChooser && <SuitChooser onChoose={handleChooseSuit} />}
-
-      {/* 토스트 알림 (SURRENDERED는 리다이렉트로 처리하므로 제외) */}
-      {notification && notification !== 'SURRENDERED' && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium z-50 animate-bounce">
-          {notification}
-        </div>
-      )}
 
       {/* 항복 확인 모달 */}
       {showSurrenderConfirm && (
