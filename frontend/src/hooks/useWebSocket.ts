@@ -11,7 +11,7 @@ export function useWebSocket() {
     if (!token) return
 
     const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+      webSocketFactory: () => new SockJS(`http://${window.location.hostname}:8080/ws`),
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       onConnect: () => console.log('WebSocket connected'),
