@@ -123,6 +123,11 @@ public class GameService {
             }
         }
 
+        // 게임 종료 시 포인트를 브로드캐스트 전에 저장
+        if (state.getPhase() == GamePhase.GAME_OVER) {
+            handleGameOver(roomId, state);
+        }
+
         broadcastGameState(roomId, state);
 
         // 관련 플레이어들에게 손패 업데이트 전송
@@ -131,11 +136,6 @@ public class GameService {
         }
 
         scheduleTurnIfNeeded(roomId, state);
-
-        // 게임 종료 처리
-        if (state.getPhase() == GamePhase.GAME_OVER) {
-            handleGameOver(roomId, state);
-        }
     }
 
     public void rejoinGame(Long roomId, String username) {
@@ -189,8 +189,8 @@ public class GameService {
                 state.setWinnerId(state.getPlayers().get(0).getUserId());
             }
             state.setPhase(GamePhase.GAME_OVER);
-            broadcastGameState(roomId, state);
             handleGameOver(roomId, state);
+            broadcastGameState(roomId, state);
             return;
         }
 

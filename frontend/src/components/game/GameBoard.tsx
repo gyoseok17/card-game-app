@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGameStore } from '../../store/useGameStore'
 import { useAuthStore } from '../../store/useAuthStore'
@@ -30,6 +30,8 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
   const [now, setNow] = useState(Date.now())
   const [showSurrenderConfirm, setShowSurrenderConfirm] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
+  const [earnedPoints, setEarnedPoints] = useState<number | null>(null)
+  const prevPointsRef = useRef<number | null>(null)
 
   // 1초마다 현재 시각 갱신 (타이머 표시용)
   useEffect(() => {
@@ -53,7 +55,13 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
 
   useEffect(() => {
     if (!gameState || gameState.phase !== 'GAME_OVER') return
+    const prev = currentUser?.points ?? 0
+    prevPointsRef.current = prev
     setCountdown(5)
+    getMe().then((user) => {
+      if (token) setAuth(token, user)
+      setEarnedPoints(user.points - prev)
+    }).catch(() => {})
   }, [gameState?.phase])
 
   useEffect(() => {
@@ -114,17 +122,9 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
     setShowSurrenderConfirm(false)
   }
 
-  const refreshUser = async () => {
-    try {
-      const user = await getMe()
-      if (token) setAuth(token, user)
-    } catch { /* ignore */ }
-  }
-
   const handleReturnToWaitingRoom = async () => {
     const roomId = gameState?.roomId
     clearGame()
-    await refreshUser()
     if (roomId) {
       const updatedRoom = await getRoom(roomId)
       setCurrentRoom(updatedRoom)
@@ -344,6 +344,11 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
             <p className="text-gray-600 mb-2">
               {winner?.username}님이 이겼습니다!
             </p>
+            {earnedPoints !== null && (
+              <p className="text-green-500 text-lg font-bold mb-2">
+                +{earnedPoints}P
+              </p>
+            )}
             <p className="text-gray-400 text-sm mb-6">
               {countdown}초 후 대기방으로 이동합니다
             </p>
