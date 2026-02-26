@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { leaveRoom, toggleReady, startGame, kickPlayer } from '../../api/room'
 import { useGameStore } from '../../store/useGameStore'
 import { useAuthStore } from '../../store/useAuthStore'
 import GameChat from './GameChat'
+import GameRules from './GameRules'
 
 interface Props {
   sendChat: (content: string) => void
@@ -15,6 +16,7 @@ export default function WaitingRoom({ sendChat }: Props) {
   const notification = useGameStore((s) => s.notification)
   const currentUser = useAuthStore((s) => s.currentUser)
   const navigate = useNavigate()
+  const [showRules, setShowRules] = useState(false)
 
   // 강퇴당하거나 방이 삭제됐을 때 로비로 이동
   useEffect(() => {
@@ -111,6 +113,12 @@ export default function WaitingRoom({ sendChat }: Props) {
             >
               나가기
             </button>
+            <button
+              onClick={() => setShowRules(true)}
+              className="py-2.5 px-4 border border-white/30 text-white/70 rounded-lg text-sm hover:bg-white/10 transition"
+            >
+              규칙
+            </button>
             {isCreator ? (
               <button
                 onClick={handleStart}
@@ -139,6 +147,8 @@ export default function WaitingRoom({ sendChat }: Props) {
           <GameChat sendChat={sendChat} />
         </div>
       </div>
+
+      {showRules && <GameRules onClose={() => setShowRules(false)} />}
     </div>
   )
 }

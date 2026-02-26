@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/useAuthStore'
 import { useLobbyStore } from '../store/useLobbyStore'
 import { useGameStore } from '../store/useGameStore'
 import type { GameRoomSummary } from '../types'
+import GameRules from '../components/game/GameRules'
 
 export default function LobbyPage() {
   const currentUser = useAuthStore((s) => s.currentUser)
@@ -20,6 +21,7 @@ export default function LobbyPage() {
   const [roomName, setRoomName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState(4)
   const [error, setError] = useState<string | null>(null)
+  const [showRules, setShowRules] = useState(false)
 
   useEffect(() => {
     getRooms().then(setRooms).catch(console.error)
@@ -70,6 +72,9 @@ export default function LobbyPage() {
       <header className="bg-green-900/80 backdrop-blur border-b border-green-700 px-6 py-3 flex items-center justify-between">
         <h1 className="text-xl font-bold text-white">OneCard Game</h1>
         <div className="flex items-center gap-4">
+          <button onClick={() => setShowRules(true)} className="text-green-300 hover:text-white text-sm">
+            규칙
+          </button>
           <span className="text-green-200 text-sm">
             {currentUser?.username} ({currentUser?.points}P)
           </span>
@@ -171,6 +176,8 @@ export default function LobbyPage() {
           </div>
         </div>
       )}
+
+      {showRules && <GameRules onClose={() => setShowRules(false)} />}
 
       {error && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium z-50">

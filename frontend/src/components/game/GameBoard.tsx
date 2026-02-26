@@ -7,6 +7,7 @@ import { getMe } from '../../api/auth'
 import CardComponent from './CardComponent'
 import SuitChooser from './SuitChooser'
 import GameChat from './GameChat'
+import GameRules from './GameRules'
 
 const TURN_TIMEOUT = 30
 const GRACE_PERIOD = 15
@@ -29,6 +30,7 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
   const navigate = useNavigate()
   const [now, setNow] = useState(Date.now())
   const [showSurrenderConfirm, setShowSurrenderConfirm] = useState(false)
+  const [showRules, setShowRules] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [earnedPoints, setEarnedPoints] = useState<number | null>(null)
   const prevPointsRef = useRef<number | null>(null)
@@ -181,15 +183,23 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
     <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-950 flex flex-row">
       {/* 게임 영역: 3x3 그리드 */}
       <div className="flex-1 grid grid-rows-[auto_1fr_auto] grid-cols-[auto_1fr_auto] min-w-0 relative">
-        {/* 항복 버튼 */}
-        {!isGameOver && (
+        {/* 상단 버튼 */}
+        <div className="absolute right-4 top-4 flex gap-2 z-10">
           <button
-            onClick={() => setShowSurrenderConfirm(true)}
-            className="absolute right-4 top-4 bg-red-600/70 hover:bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg transition border border-red-400/50 z-10"
+            onClick={() => setShowRules(true)}
+            className="bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded-lg transition border border-white/30"
           >
-            항복
+            규칙
           </button>
-        )}
+          {!isGameOver && (
+            <button
+              onClick={() => setShowSurrenderConfirm(true)}
+              className="bg-red-600/70 hover:bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg transition border border-red-400/50"
+            >
+              항복
+            </button>
+          )}
+        </div>
 
         {/* 북(상단): 맞은편 상대 */}
         <div className="col-start-2 row-start-1 flex justify-center pt-4 px-4">
@@ -309,6 +319,7 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
       </div>
 
       {showSuitChooser && <SuitChooser onChoose={handleChooseSuit} />}
+      {showRules && <GameRules onClose={() => setShowRules(false)} />}
 
       {/* 항복 확인 모달 */}
       {showSurrenderConfirm && (
