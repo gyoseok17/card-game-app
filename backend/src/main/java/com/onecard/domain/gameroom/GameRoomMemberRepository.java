@@ -21,4 +21,6 @@ public interface GameRoomMemberRepository extends JpaRepository<GameRoomMember, 
     void deleteByRoomIdAndUserId(Long roomId, Long userId);
 
     void deleteAllByRoomId(Long roomId);
+
+    Optional<GameRoomMember> findFirstByUserIdOrderByIdDesc(Long userId);
 }

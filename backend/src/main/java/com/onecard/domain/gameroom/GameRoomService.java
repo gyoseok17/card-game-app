@@ -162,4 +162,23 @@ public class GameRoomService {
     public List<GameRoomMember> getMembers(Long roomId) {
         return memberRepository.findByRoomIdWithUser(roomId);
     }
+
+    public Long findRoomIdByUserId(Long userId) {
+        return memberRepository.findFirstByUserIdOrderByIdDesc(userId)
+                .map(m -> m.getRoom().getId())
+                .orElse(null);
+    }
+
+    @Transactional
+    public void disconnectLeave(Long roomId, Long userId) {
+        GameRoom room = gameRoomRepository.findById(roomId).orElse(null);
+        if (room == null) return;
+
+        if (room.getCreatedBy().getId().equals(userId)) {
+            memberRepository.deleteAllByRoomId(roomId);
+            gameRoomRepository.delete(room);
+        } else {
+            memberRepository.deleteByRoomIdAndUserId(roomId, userId);
+        }
+    }
 }
