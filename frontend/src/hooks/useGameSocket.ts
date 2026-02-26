@@ -18,7 +18,7 @@ export function useGameSocket(roomId: number | null) {
     if (!token || !roomId) return
 
     const client = new Client({
-      webSocketFactory: () => new SockJS(`http://${window.location.hostname}:8080/ws`),
+      webSocketFactory: () => new SockJS(`${window.location.origin}/ws`),
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       onConnect: () => {
