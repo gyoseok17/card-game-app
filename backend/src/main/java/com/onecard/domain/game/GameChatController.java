@@ -21,10 +21,13 @@ public class GameChatController {
     public void handleChat(@DestinationVariable Long roomId,
                            @Payload Map<String, String> payload,
                            Principal principal) {
+        String content = payload.get("content");
+        if (content == null || content.isBlank() || content.length() > 50) return;
+
         Map<String, Object> message = Map.of(
                 "type", "CHAT",
                 "senderName", principal.getName(),
-                "content", payload.get("content"),
+                "content", content,
                 "sentAt", LocalDateTime.now().toString()
         );
         messagingTemplate.convertAndSend("/topic/game/" + roomId + "/chat", message);

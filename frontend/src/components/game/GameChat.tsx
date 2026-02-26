@@ -67,6 +67,7 @@ export default function GameChat({ sendChat }: Props) {
         <input
           type="text"
           value={input}
+          maxLength={50}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           placeholder="메시지 입력..."

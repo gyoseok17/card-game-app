@@ -149,6 +149,7 @@ export default function LobbyPage() {
               type="text"
               placeholder="방 이름"
               value={roomName}
+              maxLength={20}
               onChange={(e) => setRoomName(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               autoFocus
