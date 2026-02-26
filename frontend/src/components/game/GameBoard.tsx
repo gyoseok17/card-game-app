@@ -336,8 +336,8 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
 
       {/* 게임 종료 모달 */}
       {isGameOver && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-sm w-full">
+        <div className="fixed inset-0 flex items-end justify-center pb-48 z-50 pointer-events-none">
+          <div className="bg-white/70 backdrop-blur rounded-2xl shadow-2xl p-8 text-center max-w-sm w-full pointer-events-auto">
             <h2 className="text-2xl font-bold mb-2">
               {winner?.userId === currentUser?.id ? '승리!' : '패배...'}
             </h2>

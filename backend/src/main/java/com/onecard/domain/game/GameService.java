@@ -247,10 +247,15 @@ public class GameService {
         int tableIndex = Math.min(state.getInitialPlayerCount(), 4) - 2; // 2인→0, 3인→1, 4인→2
         int[] rewards = POINT_REWARDS[Math.max(0, tableIndex)];
 
+        int rank = 0;
         for (int i = 0; i < ranked.size(); i++) {
+            // 이전 플레이어와 카드 수가 다르면 등수 갱신 (건너뛰기 방식: 1등-2등-2등-4등)
+            if (i == 0 || ranked.get(i).handSize() != ranked.get(i - 1).handSize()) {
+                rank = i;
+            }
             PlayerState player = ranked.get(i);
             User user = userService.findById(player.getUserId());
-            int points = i < rewards.length ? rewards[i] : rewards[rewards.length - 1];
+            int points = rank < rewards.length ? rewards[rank] : rewards[rewards.length - 1];
             user.addPoints(points);
             userService.save(user);
         }
