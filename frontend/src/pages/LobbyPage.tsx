@@ -7,8 +7,10 @@ import { useLobbyStore } from '../store/useLobbyStore'
 import { useGameStore } from '../store/useGameStore'
 import type { GameRoomSummary } from '../types'
 import GameRules from '../components/game/GameRules'
+import { useWebSocket } from '../hooks/useWebSocket'
 
 export default function LobbyPage() {
+  useWebSocket()
   const currentUser = useAuthStore((s) => s.currentUser)
   const setAuth = useAuthStore((s) => s.setAuth)
   const token = useAuthStore((s) => s.token)
@@ -22,6 +24,17 @@ export default function LobbyPage() {
   const [maxPlayers, setMaxPlayers] = useState(4)
   const [error, setError] = useState<string | null>(null)
   const [showRules, setShowRules] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    const msg = sessionStorage.getItem('onecard-room-deleted')
+    if (msg) {
+      sessionStorage.removeItem('onecard-room-deleted')
+      setNotice(msg)
+      const timer = setTimeout(() => setNotice(null), 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [])
 
   useEffect(() => {
     getRooms().then(setRooms).catch(console.error)
@@ -179,9 +192,9 @@ export default function LobbyPage() {
 
       {showRules && <GameRules onClose={() => setShowRules(false)} />}
 
-      {error && (
+      {(error || notice) && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium z-50">
-          {error}
+          {error || notice}
         </div>
       )}
     </div>

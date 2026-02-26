@@ -20,6 +20,7 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsServiceImpl userDetailsService;
+    private final ActiveSessionManager activeSessionManager;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -35,6 +36,8 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 accessor.setUser(auth);
+
+                activeSessionManager.registerSession(username, token);
             } else {
                 log.warn("WebSocket connection attempt with invalid/missing token");
             }

@@ -22,9 +22,27 @@ export function useGameSocket(roomId: number | null) {
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       onConnect: () => {
+        // 중복 로그인 감지
+        client.subscribe('/user/queue/force-disconnect', (frame) => {
+          const data = JSON.parse(frame.body)
+          const myToken = useAuthStore.getState().token
+          if (data.blacklistedToken === myToken) {
+            sessionStorage.setItem('onecard-force-logout', data.message)
+            client.reconnectDelay = 0
+            client.deactivate()
+            sessionStorage.removeItem('onecard-auth')
+            window.location.href = '/login'
+          }
+        })
+
         // 방 상태 구독 (입장·준비·나가기 실시간 반영)
         client.subscribe(`/topic/room/${roomId}`, (frame) => {
           const room = JSON.parse(frame.body)
+          if (room.deleted) {
+            sessionStorage.setItem('onecard-room-deleted', room.message)
+            window.location.href = '/lobby'
+            return
+          }
           setCurrentRoom(room)
         })
 

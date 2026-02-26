@@ -20,8 +20,13 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('onecard-auth')
-      window.location.href = '/login'
+      if (err.response?.data?.error === 'TOKEN_BLACKLISTED') {
+        sessionStorage.setItem('onecard-force-logout', err.response.data.message)
+      }
+      sessionStorage.removeItem('onecard-auth')
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(err)
   }

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import { logout as logoutApi } from '../api/auth'
 import type { User } from '../types'
 
 interface AuthStore {
@@ -15,7 +16,10 @@ export const useAuthStore = create<AuthStore>()(
       token: null,
       currentUser: null,
       setAuth: (token, user) => set({ token, currentUser: user }),
-      logout: () => set({ token: null, currentUser: null }),
+      logout: async () => {
+        try { await logoutApi() } catch { /* ignore */ }
+        set({ token: null, currentUser: null })
+      },
     }),
     {
       name: 'onecard-auth',

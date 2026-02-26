@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { login } from '../api/auth'
 import { useAuthStore } from '../store/useAuthStore'
@@ -7,8 +7,19 @@ export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [forceLogoutMsg, setForceLogoutMsg] = useState<string | null>(null)
   const setAuth = useAuthStore((s) => s.setAuth)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const msg = sessionStorage.getItem('onecard-force-logout')
+    if (msg) {
+      sessionStorage.removeItem('onecard-force-logout')
+      setForceLogoutMsg(msg)
+      const timer = setTimeout(() => setForceLogoutMsg(null), 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,6 +70,12 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
+
+      {forceLogoutMsg && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-red-500/90 text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium z-50 animate-fade-in">
+          {forceLogoutMsg}
+        </div>
+      )}
     </div>
   )
 }
