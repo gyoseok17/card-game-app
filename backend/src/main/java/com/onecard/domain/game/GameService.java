@@ -9,6 +9,7 @@ import com.onecard.domain.gameroom.GameRoom;
 import com.onecard.domain.gameroom.GameRoomMember;
 import com.onecard.domain.gameroom.GameRoomService;
 import com.onecard.domain.user.User;
+import com.onecard.domain.user.UserRepository;
 import com.onecard.domain.user.UserService;
 import com.onecard.dto.request.GameActionRequest;
 import com.onecard.dto.response.GameStateResponse;
@@ -21,6 +22,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,6 +35,7 @@ public class GameService {
     private final GameManager gameManager;
     private final GameRoomService gameRoomService;
     private final UserService userService;
+    private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final DisconnectScheduler disconnectScheduler;
     private final TurnTimerScheduler turnTimerScheduler;
@@ -247,18 +252,20 @@ public class GameService {
         int tableIndex = Math.min(state.getInitialPlayerCount(), 4) - 2; // 2인→0, 3인→1, 4인→2
         int[] rewards = POINT_REWARDS[Math.max(0, tableIndex)];
 
+        List<Long> userIds = ranked.stream().map(PlayerState::getUserId).toList();
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
         int rank = 0;
         for (int i = 0; i < ranked.size(); i++) {
-            // 이전 플레이어와 카드 수가 다르면 등수 갱신 (건너뛰기 방식: 1등-2등-2등-4등)
             if (i == 0 || ranked.get(i).handSize() != ranked.get(i - 1).handSize()) {
                 rank = i;
             }
-            PlayerState player = ranked.get(i);
-            User user = userService.findById(player.getUserId());
+            User user = userMap.get(ranked.get(i).getUserId());
             int points = rank < rewards.length ? rewards[rank] : rewards[rewards.length - 1];
             user.addPoints(points);
-            userService.save(user);
         }
+        userRepository.saveAll(userMap.values());
 
         gameManager.removeGame(roomId);
         gameRoomService.resetRoom(roomId);
