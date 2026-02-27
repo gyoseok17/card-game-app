@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -39,6 +40,8 @@ public class GameService {
     private final SimpMessagingTemplate messagingTemplate;
     private final DisconnectScheduler disconnectScheduler;
     private final TurnTimerScheduler turnTimerScheduler;
+
+    private final ConcurrentHashMap<Long, Object> roomLocks = new ConcurrentHashMap<>();
 
     private static final int TURN_TIMEOUT_SECONDS = 30;
 
@@ -64,83 +67,86 @@ public class GameService {
         log.info("Game started in room {} with {} players", roomId, players.size());
     }
 
-    public synchronized void handleAction(Long roomId, String username, GameActionRequest request) {
-        GameState state = gameManager.getGame(roomId);
-        if (state == null) {
-            sendNotification(username, "활성화된 게임이 없습니다.");
-            return;
-        }
-
-        User user = userService.findByUsername(username);
-        int playerIndex = findPlayerIndex(state, user.getId());
-        if (playerIndex == -1) {
-            sendNotification(username, "이 게임의 참가자가 아닙니다.");
-            return;
-        }
-
-        switch (request.getActionType()) {
-            case "PLAY_CARD" -> {
-                if (!gameEngine.isValidPlay(state, playerIndex, request.getCardIndex())) {
-                    sendNotification(username, "이 카드를 낼 수 없습니다.");
-                    return;
-                }
-                gameEngine.applyPlayCard(state, playerIndex, request.getCardIndex());
-            }
-            case "DRAW_CARD" -> {
-                if (state.getCurrentPlayerIndex() != playerIndex) {
-                    sendNotification(username, "아직 내 차례가 아닙니다.");
-                    return;
-                }
-                gameEngine.applyDrawCards(state, playerIndex);
-            }
-            case "CHOOSE_SUIT" -> {
-                if (state.getPhase() != GamePhase.WAITING_FOR_SUIT_CHOICE) {
-                    sendNotification(username, "문양을 선택할 수 없는 상태입니다.");
-                    return;
-                }
-                if (state.getCurrentPlayerIndex() != playerIndex) {
-                    sendNotification(username, "아직 내 차례가 아닙니다.");
-                    return;
-                }
-                Suit suit = Suit.valueOf(request.getChosenSuit());
-                gameEngine.applyChooseSuit(state, suit);
-            }
-            case "DECLARE_ONECARD" -> {
-                PlayerState player = state.getPlayers().get(playerIndex);
-                if (player.handSize() == 1) {
-                    player.setDeclaredOneCard(true);
-                }
-            }
-            case "SURRENDER" -> {
-                sendSystemChat(roomId, username + "님이 항복했습니다.");
-                handlePlayerLeave(roomId, user.getId());
-                // 게임이 아직 진행 중이면(3인+ 항복) 방 멤버에서도 제거 후 로비 이동 알림
-                GameState afterLeave = gameManager.getGame(roomId);
-                if (afterLeave != null && afterLeave.getPhase() != GamePhase.GAME_OVER) {
-                    gameRoomService.removeMember(roomId, user.getId());
-                    sendNotification(username, "SURRENDERED");
-                }
+    public void handleAction(Long roomId, String username, GameActionRequest request) {
+        Object lock = roomLocks.computeIfAbsent(roomId, k -> new Object());
+        synchronized (lock) {
+            GameState state = gameManager.getGame(roomId);
+            if (state == null) {
+                sendNotification(username, "활성화된 게임이 없습니다.");
                 return;
             }
-            default -> {
-                sendNotification(username, "알 수 없는 액션입니다.");
+
+            User user = userService.findByUsername(username);
+            int playerIndex = findPlayerIndex(state, user.getId());
+            if (playerIndex == -1) {
+                sendNotification(username, "이 게임의 참가자가 아닙니다.");
                 return;
             }
+
+            switch (request.getActionType()) {
+                case "PLAY_CARD" -> {
+                    if (!gameEngine.isValidPlay(state, playerIndex, request.getCardIndex())) {
+                        sendNotification(username, "이 카드를 낼 수 없습니다.");
+                        return;
+                    }
+                    gameEngine.applyPlayCard(state, playerIndex, request.getCardIndex());
+                }
+                case "DRAW_CARD" -> {
+                    if (state.getCurrentPlayerIndex() != playerIndex) {
+                        sendNotification(username, "아직 내 차례가 아닙니다.");
+                        return;
+                    }
+                    gameEngine.applyDrawCards(state, playerIndex);
+                }
+                case "CHOOSE_SUIT" -> {
+                    if (state.getPhase() != GamePhase.WAITING_FOR_SUIT_CHOICE) {
+                        sendNotification(username, "문양을 선택할 수 없는 상태입니다.");
+                        return;
+                    }
+                    if (state.getCurrentPlayerIndex() != playerIndex) {
+                        sendNotification(username, "아직 내 차례가 아닙니다.");
+                        return;
+                    }
+                    Suit suit = Suit.valueOf(request.getChosenSuit());
+                    gameEngine.applyChooseSuit(state, suit);
+                }
+                case "DECLARE_ONECARD" -> {
+                    PlayerState player = state.getPlayers().get(playerIndex);
+                    if (player.handSize() == 1) {
+                        player.setDeclaredOneCard(true);
+                    }
+                }
+                case "SURRENDER" -> {
+                    sendSystemChat(roomId, username + "님이 항복했습니다.");
+                    handlePlayerLeaveInternal(roomId, user.getId(), state);
+                    // 게임이 아직 진행 중이면(3인+ 항복) 방 멤버에서도 제거 후 로비 이동 알림
+                    GameState afterLeave = gameManager.getGame(roomId);
+                    if (afterLeave != null && afterLeave.getPhase() != GamePhase.GAME_OVER) {
+                        gameRoomService.removeMember(roomId, user.getId());
+                        sendNotification(username, "SURRENDERED");
+                    }
+                    return;
+                }
+                default -> {
+                    sendNotification(username, "알 수 없는 액션입니다.");
+                    return;
+                }
+            }
+
+            // 게임 종료 시 포인트를 브로드캐스트 전에 저장
+            if (state.getPhase() == GamePhase.GAME_OVER) {
+                handleGameOver(roomId, state);
+            }
+
+            broadcastGameState(roomId, state);
+
+            // 관련 플레이어들에게 손패 업데이트 전송
+            for (PlayerState player : state.getPlayers()) {
+                sendPlayerHand(roomId, player);
+            }
+
+            scheduleTurnIfNeeded(roomId, state);
         }
-
-        // 게임 종료 시 포인트를 브로드캐스트 전에 저장
-        if (state.getPhase() == GamePhase.GAME_OVER) {
-            handleGameOver(roomId, state);
-        }
-
-        broadcastGameState(roomId, state);
-
-        // 관련 플레이어들에게 손패 업데이트 전송
-        for (PlayerState player : state.getPlayers()) {
-            sendPlayerHand(roomId, player);
-        }
-
-        scheduleTurnIfNeeded(roomId, state);
     }
 
     public void rejoinGame(Long roomId, String username) {
@@ -168,10 +174,16 @@ public class GameService {
         log.info("Player {} rejoined game in room {}", username, roomId);
     }
 
-    public synchronized void handlePlayerLeave(Long roomId, Long userId) {
-        GameState state = gameManager.getGame(roomId);
-        if (state == null || state.getPhase() == GamePhase.GAME_OVER) return;
+    public void handlePlayerLeave(Long roomId, Long userId) {
+        Object lock = roomLocks.computeIfAbsent(roomId, k -> new Object());
+        synchronized (lock) {
+            GameState state = gameManager.getGame(roomId);
+            if (state == null || state.getPhase() == GamePhase.GAME_OVER) return;
+            handlePlayerLeaveInternal(roomId, userId, state);
+        }
+    }
 
+    private void handlePlayerLeaveInternal(Long roomId, Long userId, GameState state) {
         int playerIndex = findPlayerIndex(state, userId);
         if (playerIndex == -1) return;
 
@@ -268,6 +280,7 @@ public class GameService {
         userRepository.saveAll(userMap.values());
 
         gameManager.removeGame(roomId);
+        roomLocks.remove(roomId);
         gameRoomService.resetRoom(roomId);
     }
 
