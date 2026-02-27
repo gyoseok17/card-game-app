@@ -20,8 +20,8 @@ public class GameRoomService {
     private final GameRoomMemberRepository memberRepository;
 
     public List<GameRoomSummaryResponse> getWaitingRooms() {
-        return gameRoomRepository.findByStatus(RoomStatus.WAITING).stream()
-                .map(room -> new GameRoomSummaryResponse(room, memberRepository.countByRoomId(room.getId())))
+        return gameRoomRepository.findByStatusWithMemberCount(RoomStatus.WAITING).stream()
+                .map(row -> new GameRoomSummaryResponse((GameRoom) row[0], (long) row[1]))
                 .toList();
     }
 

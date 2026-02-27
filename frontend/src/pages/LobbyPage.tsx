@@ -39,7 +39,7 @@ export default function LobbyPage() {
   useEffect(() => {
     getRooms().then(setRooms).catch(console.error)
     getMe().then((user) => { if (token) setAuth(token, user) }).catch(() => {})
-  }, [setRooms, token, setAuth])
+  }, [])
 
   useEffect(() => {
     if (!error) return

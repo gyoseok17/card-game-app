@@ -9,9 +9,11 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+
+import java.util.List;
 
 @Slf4j
 @Component
@@ -19,7 +21,6 @@ import org.springframework.util.StringUtils;
 public class WebSocketChannelInterceptor implements ChannelInterceptor {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final UserDetailsServiceImpl userDetailsService;
     private final ActiveSessionManager activeSessionManager;
 
     @Override
@@ -31,10 +32,9 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
 
             if (StringUtils.hasText(token) && jwtTokenProvider.isTokenValid(token)) {
                 String username = jwtTokenProvider.extractUsername(token);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        new UsernamePasswordAuthenticationToken(username, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
                 accessor.setUser(auth);
 
                 activeSessionManager.registerSession(username, token);
