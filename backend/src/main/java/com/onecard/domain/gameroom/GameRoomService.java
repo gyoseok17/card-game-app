@@ -61,7 +61,7 @@ public class GameRoomService {
             throw new IllegalArgumentException("이미 게임이 진행 중인 방입니다.");
         }
         if (memberRepository.existsByRoomIdAndUserId(roomId, user.getId())) {
-            return getRoom(roomId);
+            return buildRoomResponse(room);
         }
 
         List<GameRoomMember> members = memberRepository.findByRoomIdWithUser(roomId);
@@ -77,7 +77,7 @@ public class GameRoomService {
         memberRepository.save(
                 GameRoomMember.builder().room(room).user(user).seatOrder(nextSeatOrder).build()
         );
-        return getRoom(roomId);
+        return buildRoomResponse(room);
     }
 
     @Transactional
@@ -95,7 +95,7 @@ public class GameRoomService {
             throw new IllegalArgumentException("자신을 강퇴할 수 없습니다.");
         }
         memberRepository.deleteByRoomIdAndUserId(roomId, targetId);
-        return getRoom(roomId);
+        return buildRoomResponse(room);
     }
 
     @Transactional
@@ -117,7 +117,8 @@ public class GameRoomService {
         GameRoomMember member = memberRepository.findByRoomIdAndUserId(roomId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("방 멤버가 아닙니다."));
         member.toggleReady();
-        return getRoom(roomId);
+        GameRoom room = findById(roomId);
+        return buildRoomResponse(room);
     }
 
     @Transactional
@@ -152,6 +153,13 @@ public class GameRoomService {
         GameRoom room = findById(roomId);
         room.reset();
         memberRepository.findByRoomIdWithUser(roomId).forEach(GameRoomMember::resetReady);
+    }
+
+    private GameRoomResponse buildRoomResponse(GameRoom room) {
+        List<GameRoomMemberResponse> members = memberRepository.findByRoomIdWithUser(room.getId()).stream()
+                .map(GameRoomMemberResponse::new)
+                .toList();
+        return new GameRoomResponse(room, members);
     }
 
     public GameRoom findById(Long roomId) {
