@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import { useAuthStore } from '../store/useAuthStore'
+import { subscribeForceDisconnect } from '../utils/forceDisconnect'
 
 export function useWebSocket() {
   const clientRef = useRef<Client | null>(null)
@@ -16,17 +17,7 @@ export function useWebSocket() {
       reconnectDelay: 5000,
       onConnect: () => {
         console.log('WebSocket connected')
-        client.subscribe('/user/queue/force-disconnect', (frame) => {
-          const data = JSON.parse(frame.body)
-          const myToken = useAuthStore.getState().token
-          if (data.blacklistedToken === myToken) {
-            sessionStorage.setItem('onecard-force-logout', data.message)
-            client.reconnectDelay = 0
-            client.deactivate()
-            sessionStorage.removeItem('onecard-auth')
-            window.location.href = '/login'
-          }
-        })
+        subscribeForceDisconnect(client)
       },
       onDisconnect: () => console.log('WebSocket disconnected'),
       onStompError: (frame) => console.error('STOMP error', frame),
