@@ -8,9 +8,35 @@ import CardComponent from './CardComponent'
 import SuitChooser from './SuitChooser'
 import GameChat from './GameChat'
 import GameRules from './GameRules'
+import TurnTimer from './TurnTimer'
+import GraceTimer from './GraceTimer'
 
 const TURN_TIMEOUT = 30
-const GRACE_PERIOD = 15
+
+function MyTurnTimer({ turnStartedAt }: { turnStartedAt: number }) {
+  const [remaining, setRemaining] = useState(() => {
+    const elapsed = Math.floor((Date.now() - turnStartedAt) / 1000)
+    return Math.max(0, TURN_TIMEOUT - elapsed)
+  })
+
+  useEffect(() => {
+    const update = () => {
+      const elapsed = Math.floor((Date.now() - turnStartedAt) / 1000)
+      setRemaining(Math.max(0, TURN_TIMEOUT - elapsed))
+    }
+    update()
+    const interval = setInterval(update, 1000)
+    return () => clearInterval(interval)
+  }, [turnStartedAt])
+
+  return (
+    <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+      remaining <= 5 ? 'bg-red-500 text-white animate-pulse' : 'bg-white/20 text-white'
+    }`}>
+      {remaining}초
+    </span>
+  )
+}
 
 interface Props {
   sendAction: (actionType: string, cardIndex?: number, chosenSuit?: string) => void
@@ -28,18 +54,11 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
   const setAuth = useAuthStore((s) => s.setAuth)
   const token = useAuthStore((s) => s.token)
   const navigate = useNavigate()
-  const [now, setNow] = useState(Date.now())
   const [showSurrenderConfirm, setShowSurrenderConfirm] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [earnedPoints, setEarnedPoints] = useState<number | null>(null)
   const prevPointsRef = useRef<number | null>(null)
-
-  // 1초마다 현재 시각 갱신 (타이머 표시용)
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(interval)
-  }, [])
 
   useEffect(() => {
     if (!notification) return
@@ -97,10 +116,6 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
   const north = totalPlayers === 2 ? orderedOpponents[0] : totalPlayers >= 3 ? orderedOpponents[1] : null
   const east = totalPlayers >= 4 ? orderedOpponents[2] : null
 
-  // 턴 남은 시간 계산
-  const turnElapsed = Math.floor((now - gameState.turnStartedAt) / 1000)
-  const turnRemaining = Math.max(0, TURN_TIMEOUT - turnElapsed)
-
   const handlePlayCard = (index: number) => {
     if (!isMyTurn || gameState.phase !== 'WAITING_FOR_PLAY') return
     sendAction('PLAY_CARD', index)
@@ -133,14 +148,7 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
     }
   }
 
-  const getGraceRemaining = (disconnectedAt: number | null) => {
-    if (!disconnectedAt) return null
-    const elapsed = Math.floor((now - disconnectedAt) / 1000)
-    return Math.max(0, GRACE_PERIOD - elapsed)
-  }
-
   const renderOpponent = (opp: typeof gameState.players[number]) => {
-    const graceRemaining = getGraceRemaining(opp.disconnectedAt)
     return (
       <div
         key={opp.userId}
@@ -165,15 +173,11 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
         {opp.declaredOneCard && (
           <span className="text-yellow-400 text-xs font-bold block">ONE CARD!</span>
         )}
-        {!opp.connected && graceRemaining !== null && (
-          <span className="text-red-300 text-xs font-bold block">{graceRemaining}초</span>
+        {!opp.connected && opp.disconnectedAt && (
+          <GraceTimer disconnectedAt={opp.disconnectedAt} />
         )}
         {gameState.currentPlayerId === opp.userId && !isGameOver && (
-          <span className={`text-xs font-bold block mt-1 ${
-            turnRemaining <= 5 ? 'text-red-400 animate-pulse' : 'text-yellow-300'
-          }`}>
-            {turnRemaining}초
-          </span>
+          <TurnTimer turnStartedAt={gameState.turnStartedAt} />
         )}
       </div>
     )
@@ -279,11 +283,7 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
                 <span className="bg-yellow-500 text-black px-4 py-1 rounded-full text-sm font-bold animate-pulse">
                   내 차례!
                 </span>
-                <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-                  turnRemaining <= 5 ? 'bg-red-500 text-white animate-pulse' : 'bg-white/20 text-white'
-                }`}>
-                  {turnRemaining}초
-                </span>
+                <MyTurnTimer turnStartedAt={gameState.turnStartedAt} />
               </>
             )}
             {myHand.length === 1 && (
