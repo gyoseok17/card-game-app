@@ -42,7 +42,6 @@ public record Card(Suit suit, Rank rank) {
             return isAttack() && this.attackValue() >= topCard.attackValue();
         }
         if (isJoker()) return true;
-        if (rank == Rank.SEVEN) return true;
         if (topCard.isJoker()) return true; // 조커 공격 성공 후 아무 카드나 가능
 
         Suit effectiveSuit = (activeSuit != null) ? activeSuit : topCard.suit();
