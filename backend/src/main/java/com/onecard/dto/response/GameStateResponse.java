@@ -16,6 +16,7 @@ public class GameStateResponse {
     private Long currentPlayerId;
     private String direction;
     private CardDto topCard;
+    private CardDto previousCard;
     private String activeSuit;
     private int attackStack;
     private int deckRemaining;
@@ -25,6 +26,11 @@ public class GameStateResponse {
     private Long winnerId;
 
     public static GameStateResponse from(GameState state, GameEngine engine) {
+        List<com.onecard.domain.game.engine.Card> discardPile = state.getDiscardPile();
+        CardDto previousCard = discardPile.size() >= 2
+                ? CardDto.from(discardPile.get(discardPile.size() - 2))
+                : null;
+
         return new GameStateResponse(
                 state.getRoomId(),
                 state.getPhase().name(),
@@ -32,6 +38,7 @@ public class GameStateResponse {
                 state.getCurrentPlayer().getUserId(),
                 state.getDirection().name(),
                 CardDto.from(engine.getTopCard(state)),
+                previousCard,
                 state.getActiveSuit() != null ? state.getActiveSuit().name() : null,
                 state.getAttackStack(),
                 state.getDeck().size(),

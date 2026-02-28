@@ -236,7 +236,14 @@ export default function GameBoard({ sendAction, sendChat }: Props) {
 
           {/* 버린 카드 더미 */}
           <div className="text-center">
-            <CardComponent card={gameState.topCard} size="lg" />
+            <div className="flex items-end justify-center gap-2">
+              {gameState.previousCard && (
+                <div className="opacity-50">
+                  <CardComponent card={gameState.previousCard} size="sm" />
+                </div>
+              )}
+              <CardComponent card={gameState.topCard} size="lg" />
+            </div>
             <span className="text-blue-300 text-xs">{gameState.discardPileSize}장</span>
             {gameState.activeSuit && (
               <p className="text-yellow-300 text-sm mt-2 font-medium">

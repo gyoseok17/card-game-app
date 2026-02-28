@@ -65,6 +65,7 @@ export interface GameState {
   currentPlayerId: number
   direction: 'CLOCKWISE' | 'COUNTER_CLOCKWISE'
   topCard: Card
+  previousCard: Card | null
   activeSuit: string | null
   attackStack: number
   deckRemaining: number
