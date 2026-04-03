@@ -25,6 +25,8 @@ export default function LobbyPage() {
   const [error, setError] = useState<string | null>(null)
   const [showRules, setShowRules] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [joiningId, setJoiningId] = useState<number | null>(null)
 
   useEffect(() => {
     const msg = sessionStorage.getItem('onecard-room-deleted')
@@ -49,27 +51,35 @@ export default function LobbyPage() {
 
   const handleCreate = async () => {
     if (!roomName.trim()) return
-    const room = await createRoom({ name: roomName.trim(), maxPlayers })
-    setRooms([...rooms, {
-      id: room.id,
-      name: room.name,
-      status: room.status,
-      maxPlayers: room.maxPlayers,
-      currentPlayers: room.members.length,
-      createdBy: room.createdBy.username,
-    }])
-    setShowCreate(false)
-    setRoomName('')
-    navigate(`/game/${room.id}`)
+    setCreating(true)
+    try {
+      const room = await createRoom({ name: roomName.trim(), maxPlayers })
+      setRooms([...rooms, {
+        id: room.id,
+        name: room.name,
+        status: room.status,
+        maxPlayers: room.maxPlayers,
+        currentPlayers: room.members.length,
+        createdBy: room.createdBy.username,
+      }])
+      setShowCreate(false)
+      setRoomName('')
+      navigate(`/game/${room.id}`)
+    } finally {
+      setCreating(false)
+    }
   }
 
   const handleJoin = async (room: GameRoomSummary) => {
+    setJoiningId(room.id)
     try {
       await joinRoom(room.id)
       navigate(`/game/${room.id}`)
     } catch (err: any) {
       const msg = err.response?.data?.message || '방 입장에 실패했습니다.'
       setError(msg)
+    } finally {
+      setJoiningId(null)
     }
   }
 
@@ -125,9 +135,10 @@ export default function LobbyPage() {
               {room.currentPlayers < room.maxPlayers && (
                 <button
                   onClick={() => handleJoin(room)}
-                  className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-400 transition"
+                  disabled={joiningId === room.id}
+                  className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-400 transition disabled:opacity-60"
                 >
-                  참가
+                  {joiningId === room.id ? '입장 중...' : '참가'}
                 </button>
               )}
             </div>
@@ -181,10 +192,10 @@ export default function LobbyPage() {
               </button>
               <button
                 onClick={handleCreate}
-                disabled={!roomName.trim()}
+                disabled={!roomName.trim() || creating}
                 className="flex-1 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 disabled:opacity-50"
               >
-                만들기
+                {creating ? '생성 중...' : '만들기'}
               </button>
             </div>
           </div>

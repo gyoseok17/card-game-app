@@ -8,12 +8,14 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const setAuth = useAuthStore((s) => s.setAuth)
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setLoading(true)
     try {
       const { token, user } = await signup({ username, email, password })
       setAuth(token, user)
@@ -21,6 +23,8 @@ export default function SignupPage() {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       setError(msg || '회원가입에 실패했습니다.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -57,9 +61,10 @@ export default function SignupPage() {
           />
           <button
             type="submit"
-            className="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700 transition"
+            disabled={loading}
+            className="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-60"
           >
-            가입하기
+            {loading ? '가입 중...' : '가입하기'}
           </button>
         </form>
         <p className="text-center text-sm text-gray-500 mt-4">

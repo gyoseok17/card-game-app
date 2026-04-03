@@ -7,6 +7,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const [forceLogoutMsg, setForceLogoutMsg] = useState<string | null>(null)
   const setAuth = useAuthStore((s) => s.setAuth)
   const navigate = useNavigate()
@@ -24,6 +25,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setLoading(true)
     try {
       const { token, user } = await login({ username, password })
       setAuth(token, user)
@@ -31,6 +33,8 @@ export default function LoginPage() {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       setError(msg || '로그인에 실패했습니다.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -58,9 +62,10 @@ export default function LoginPage() {
           />
           <button
             type="submit"
-            className="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700 transition"
+            disabled={loading}
+            className="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-60"
           >
-            로그인
+            {loading ? '로그인 중...' : '로그인'}
           </button>
         </form>
         <p className="text-center text-sm text-gray-500 mt-4">
